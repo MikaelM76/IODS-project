@@ -1,7 +1,146 @@
-# Insert chapter 2 title here
+# Regression and model validation
 
-*Describe the work you have done this week and summarize your learning.*
-
+*I have created an appropriate analysis dataset and excluded unwanted observations. Here we have analysis on the dataset and it's variables.*
 - Describe your work and results clearly. 
 - Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods
 - Assume the reader has no previous knowledge of your data or the more advanced methods you are using  
+
+For these excercises the libraries "dplyr", "ggplot2" and "GGally" are necessary. When reading the code these need to be installed and read. I have also included cache = F, since without it my version of R refused to knit the plots I made
+
+
+1.
+First we read the dataset I created into R and explore its contents, dimensions and structure
+```{r}
+cache=F
+ library("dplyr")
+library("ggplot2")
+library("GGally")
+library("lattice")
+Students2014 <- read.table("~/Documents/IODS-project/data/learning2014/learning2014.txt", header = TRUE, sep = " ")
+print(Students2014)
+
+#2.
+dim(Students2014)
+str(Students2014)
+
+```
+
+Second we display graphical implementation of the data
+
+Overview:
+
+```{r}
+plot(Students2014)
+```
+
+Results without variable 'gender':
+pairs(Students2014[-1])
+```{r}
+pairs(Students2014[-1])
+```
+Last, a ggpairs-graphic for possibly a more clear display:
+```{r}
+ggpairs(Students2014, mapping = aes(col = gender, alpha = 0.3), lower = list(combo = wrap("facethist", bins = 20)))
+```
+
+Next we have summaries for the included variables and scatterplots to clarify their influence on the 'points' -variable:
+
+```{r}
+
+library(ggplot2)
+qplot(Attitude, Points, data = Students2014) + geom_smooth(method = "lm")
+qplot(Age, Points, data = Students2014) + geom_smooth(method = "lm")
+qplot(gender, Points, data = Students2014) + geom_smooth(method = "lm")
+qplot(deep, Points, data = Students2014) + geom_smooth(method = "lm")
+qplot(stra, Points, data = Students2014) + geom_smooth(method = "lm")
+qplot(surf, Points, data = Students2014) + geom_smooth(method = "lm")
+
+```
+Next some more illustration of the effects of the other variables to the 'points'-variable
+and summaries of these
+
+
+3.
+In the following simple regression models *Points* is used as the target variable while
+ other variables are used as explanatory variables. There is also a summary provided for 
+ all of the individual regressions. 
+```{r}
+M_Attitude <- lm(Points ~ Attitude, data = Students2014)
+summary(M_Attitude)
+
+M_Age <- lm(Points ~ Age, data = Students2014)
+summary(M_Age)
+
+M_gender <- lm(Points ~ gender, data = Students2014)
+summary(M_gender)
+
+M_deep <- lm(Points ~ deep, data = Students2014)
+summary(M_deep)
+
+M_stra <- lm(Points ~ stra, data = Students2014)
+summary(M_stra)
+
+M_surf <- lm(Points ~ surf, data = Students2014)
+summary(M_surf)
+
+```
+Looking at the output of the summaries, the most trustworthy explanatory variables
+are Attitude, Age, surf and stra. These are confirmed by the scatterplots of the individual dependences of points
+on the other variables. Age, Attitude and stra can be seen to probably have influence on points. The values of the regression make these assumption reasonable, with a quite low margin for failure. (Failure in this case means selecting output or in other words a random sample where the assumptions fail to reflect or descibe the truth/dependence of the variables).
+
+
+The mean, standard error and variance for the dataset's variables:
+```{r}
+sapply(Students2014, mean, na.rm = TRUE)
+sapply(Students2014, sd, na.rm = TRUE)
+sapply(Students2014, var, na.rm = TRUE)
+```
+
+
+Below is a regression model where exam points is the target/dependent variable, with three explanatory variables. These explanatory variables were chosen because it can be seen that they correlate with the variable that we are attempting to explain (points). At the same time the model is drawn in several different ways to help interpret and understand it's relevance.
+
+
+```{r}
+Model3 <- lm(formula = Points ~ Attitude + Age + stra, data = Students2014)
+plot(Model3)
+
+```
+The following functions work in my R-project, but for some reason they refused to knit to HTML. I have taken measures to enable the knitting of error terms etc, and it still won't work. (I used these functions to make some interesting plots that I discuss later in the exercise. These were not individually necessary for ch2, and I have provided a collection of the mentioned plots in an other way also. This collection is included in the code). 
+Still, I wanted to post them here to show what I did in another way. *Readers please note*: These were not as such demanded, and are provided in the necessary form later. If experimentation is done on them, I recommend copying them to an R-document, along with all the other necessary elements
+
+*r.squared(Model3, model = NULL, type = c("Attitude", "Age", "stra"), dfcor = TRUE)* #Normal Q-Q
+*r.squared(Model3, model = NULL, type = c("Attitude", "Age", "stra"), dfcor = FALSE)*
+*r.squared(Model3, model = "lm", type = c("Attitude", "Age", "stra"), dfcor = TRUE)* #Res vs Lev
+*r.squared(Model3, model = "lm", type = c("Attitude", "Age", "stra"), dfcor = FALSE)* #Res vs Fit
+
+
+
+4.
+Finally, a summary of the model:
+```{r}
+summary(Model3)
+```
+
+The summary provides seemingly significant results, with considerably high correlation to points of all the other variables.
+The error has remained quite low in relation to the amount of variables used. The r-squared shows generally how close the data on the variables is to the regression line. Experimenting with different inputs to the function r-squared 4 different but interesting outputs can be found with this ampunt of experimentation. It seems that the Multiple R^2 is quite low, so it's not too significant (It doesn't deny the validity of the regression. The variants of the r-squared functions produced the *Residuals vs Fitted*, *Residuals vs Leverage*, and *Normal Q-Q* plots, as well as Scale location. 
+
+5.
+Next, three diagnostic plots are combined to help consider the validity of the model
+```{r}
+par(mfrow = c(2,2))
+plot(Model3, which = c(1,2,5))
+
+```
+Linear regression models have a few general assumtions:
+1. Linearity
+2. The errors of the model are normally distributed.
+2. The errors are not correlated.
+3. The sizes of the errors do not depend on the variables used to explain the target variable.
+
+Now let's think how the plots produced correspond (or not) to these assumption:
+
+The Q–Q-plot demonstrates how the standardised residuals of the model fit to the theory or reasoning behind the model. Therefore the normal distribution assumption seems to be true for the model.
+
+The residuals vs. fitted values -plot does not seem to be regular/subjected to any pattern, meaning that the errors are not correlated to the explanatory variables and their size is independent.
+
+Therefore all of the assumptions are valid for the model created.
