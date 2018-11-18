@@ -1,0 +1,261 @@
+#Chapter 3 - Logistic Regression
+
+
+There was a problem reading the file into R from my computer; The code worked but the data didn't print out correctly, even though the same exact code combinations worked elsewhere, so I have included the necessary parts of the wrangling part to create the dataset again.
+```{r}
+cache=F
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(gmodels)
+```
+
+```{r}
+student_mat <-  read.csv("~/Documents/IODS-project/data/student-mat.csv", sep = ";")
+student_por <- read.csv("~/Documents/IODS-project/data/student-por.csv", sep = ";")
+
+join_by <- c("school","sex","age","address","famsize","Pstatus","Medu","Fedu","Mjob","Fjob","reason","nursery","internet")
+
+math_por <- inner_join(student_mat, student_por, by = join_by, suffix = c(".student_mat", ".student_por"))
+
+alc <- select(math_por, one_of(join_by))
+
+notjoined_columns <- colnames(student_mat)[!colnames(student_mat) %in% join_by]
+
+
+# for every column name not used for joining...
+for(column_name in notjoined_columns) {
+  # select two columns from 'math_por' with the same original name
+  two_columns <- select(math_por, starts_with(column_name))
+  # select the first column vector of those two columns
+  first_column <- select(two_columns, 1)[[1]]
+  
+  # if that first column vector is numeric...
+  if(is.numeric(first_column)) {
+    # take a rounded average of each row of the two columns and
+    # add the resulting vector to the alc data frame
+    alc[column_name] <- round(rowMeans(two_columns))
+  } else { # else if it's not numeric...
+    # add the first column vector to the alc data frame
+    alc[column_name] <- first_column
+  }
+}
+
+
+alc <- mutate(alc, alc_use = (Dalc + Walc) / 2)
+alc <- mutate(alc, high_use = alc_use > 2)
+
+```
+
+
+2. Let's read the alc data. (This works but the original output wasn't maintained from when I first wrote the code, as I explained)
+
+```{r}
+#alc <- read.csv("~/Documents/IODS-project/data/create_alc.R", row.names = NULL)
+names(alc)
+```
+
+
+3. For my variables, I chose sex, final exam scores, famsize and studytime. My hypotheses are as follows:
+Fewer females than males who took part consume a lot of alcohol. 
+I would also assume that a person who doesn't consume a lot of alcohol gets better grades than someone who drinks more.
+
+
+
+
+4. Now we must test the hypothesis.
+
+```{r}
+alc %>% group_by(sex, high_use) %>%summarise(count=n(),mean_grade=mean(G3))
+```
+
+First we have the crosstabulation for alcohol usage, sex and the average of the final exam grades. The results of this tabulation tell us two things:
+  i.) A higher percentage of men than women use alcohol a lot.
+  ii.) Interestingly, those women who drink more have slightly higher grades. In contrast, binge-drinking men have worse grades than those who don't drink a lot.
+
+
+Then let's create a boxplot of high alcohol usages effects to the final grades.
+
+```{r}
+g1 <- ggplot(alc, aes(x= high_use, y=G3), col=sex)
+g1 + geom_boxplot()+ylab("grade")
+
+```
+
+
+It is clear that on average, alcohol-lovers have worse grades than moderate drinkers.
+
+Then we have a barplot describing the relationship; alcohol usage vs. study time. Those who do not drink much are included in the darkred bar and those who drink a lot in the darkblue bar.
+
+```{r}
+counts <- table(alc$high_use, alc$studytime)
+barplot(counts, main = "Usage of alcohol", xlab = "studytime", col = c("darkred", "darkblue"), beside = TRUE)
+```
+
+The key ratio described is the share of the drinkaholics in each category of study time. The shares are about equally small in 4 and 3 but get bigger in 2 and in 1 it is almost as common to drink a lot than not to drink a lot.
+
+
+Then we compare alcohol usage to family size.
+```{r}
+counts2 <- table(alc$high_use, alc$famsize)
+barplot(counts2, main = "Usage of alcohol", xlab = "famsize", col = c("black", "gold"), beside = TRUE)
+```
+
+
+The result is that students from small families, are somewhat more likely to drink a lot than those from big families.
+
+
+5. The logistic regression describing our varibles follows.
+```{r}
+m <- glm(high_use ~ famsize + sex + G3 + studytime, data = alc, family = "binomial")
+summary(m)
+```
+
+
+
+Coefficients as odds ratios:
+```{r}
+OR <- coef(m) %>% exp
+OR
+```
+
+
+COnfidence intervals:
+```{r}
+CI <- confint(m) %>% exp
+CI
+```
+
+
+6. Sex ja study time seem to have a statistical relationship to alcohol use. That's why we modify the model to include only sex and study time.
+
+
+
+
+```{r}
+m <- glm(high_use ~ sex + studytime, data = alc, family = "binomial")
+probabilities <- predict(m, type = "response")
+alc <- mutate(alc, probability = probabilities)
+alc <- mutate(alc, prediction = probability > 0.3)
+
+select(alc, studytime, sex, high_use, probability, prediction) %>% tail(10)
+table(high_use = alc$high_use, prediction = alc$prediction)
+CrossTable(alc$high_use, alc$prediction)
+counts3 <- table(alc$high_use, alc$prediction)
+barplot(counts3, main = "Usage of alcohol", xlab = "high_use", col = c("pink", "purple"), beside = TRUE)
+
+g <- ggplot(alc, aes(x = probability, y = high_use, col = prediction))
+
+g + geom_point()
+
+table(high_use = alc$high_use, prediction = alc$prediction) %>% prop.table %>% addmargins
+
+
+loss_func <- function(class, prob) {
+  n_wrong <- abs(class - prob) > 0.5
+  mean(n_wrong)
+}
+
+loss_func(class = alc$high_use, prob = 0)
+```
+
+According to the results, the model provided provides a sense of reality, even if it it statistically not very reliable. By simply guessing what the results would be, the ideas that one comes up with could be similar but more accurate. 
+What the model probably works for though, is that is offers some slight validation for any guesses made. Not much can be concluded from the model alone however, since the ratio of wrong predictions is quite large.
+
+
+7.
+Here is ten-fold cross-validation of the model produced earlier. The average prediction error is higher than the one on datacamp. Let us see if one with a lower error can be found in Q8.
+```{r}
+library(boot)
+cv <- cv.glm(data = alc, cost = loss_func, glmfit = m, K = 10)
+cv$delta[1]
+```
+
+
+8. Let us make and compare some different models.
+First there is a model that is slightly larger than the original one.
+Second, there is one with a lot more predictors.
+Next a smaller model with different variables than the original m.
+
+```{r}
+n <- glm(high_use ~ sex + studytime + famsize + failures + activities + absences, data = alc, family = "binomial")
+probabilities <- predict(n, type = "response")
+
+select(alc, studytime, sex, high_use, probability, prediction) %>% tail(10)
+table(high_use = alc$high_use, prediction = alc$prediction)
+CrossTable(alc$high_use, alc$prediction)
+
+
+g <- ggplot(alc, aes(x = probability, y = high_use, col = prediction))
+
+g + geom_point()
+
+table(high_use = alc$high_use, prediction = alc$prediction) %>% prop.table %>% addmargins
+
+
+loss_func <- function(class, prob) {
+  n_wrong <- abs(class - prob) > 0.5
+  mean(n_wrong)
+}
+
+loss_func(class = alc$high_use, prob = 0)
+
+cv <- cv.glm(data = alc, cost = loss_func, glmfit = m, K = 10)
+cv$delta[1]
+
+
+o <- glm(high_use ~ sex + studytime + famsize + failures + activities + absences + health + goout + freetime + romantic, data = alc, family = "binomial")
+probabilities <- predict(o, type = "response")
+
+select(alc, studytime, sex, high_use, probability, prediction) %>% tail(10)
+table(high_use = alc$high_use, prediction = alc$prediction)
+CrossTable(alc$high_use, alc$prediction)
+
+
+g <- ggplot(alc, aes(x = probability, y = high_use, col = prediction))
+
+g + geom_point()
+
+table(high_use = alc$high_use, prediction = alc$prediction) %>% prop.table %>% addmargins
+
+
+loss_func <- function(class, prob) {
+  n_wrong <- abs(class - prob) > 0.5
+  mean(n_wrong)
+}
+
+loss_func(class = alc$high_use, prob = 0)
+
+cv <- cv.glm(data = alc, cost = loss_func, glmfit = m, K = 10)
+cv$delta[1]
+
+
+
+p <- glm(high_use ~ failures + activities + absences + health + goout + freetime + romantic, data = alc, family = "binomial")
+probabilities <- predict(p, type = "response")
+
+select(alc, studytime, sex, high_use, probability, prediction) %>% tail(10)
+table(high_use = alc$high_use, prediction = alc$prediction)
+CrossTable(alc$high_use, alc$prediction)
+
+
+g <- ggplot(alc, aes(x = probability, y = high_use, col = prediction))
+
+g + geom_point()
+
+table(high_use = alc$high_use, prediction = alc$prediction) %>% prop.table %>% addmargins
+
+
+loss_func <- function(class, prob) {
+  n_wrong <- abs(class - prob) > 0.5
+  mean(n_wrong)
+}
+
+loss_func(class = alc$high_use, prob = 0)
+
+cv <- cv.glm(data = alc, cost = loss_func, glmfit = m, K = 10)
+cv$delta[1]
+
+```
+As one could expect, increasing the amount of predictors decreases the average error, assuming the predictions from the smaller model are maintained. Choosing a few optimal predictors should yield a smaller number than choosing a large number of not-so-good predictors. 
+None of the models I created produced a smaller average error than the one on datacamp, and I would guess it to be quite difficult to find such a model. What surprised me was the amount by which the average prediction error changes between the models produced. I expected it to variate more.
