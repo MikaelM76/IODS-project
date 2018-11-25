@@ -1,4 +1,4 @@
-# Regression and model validation
+# Chapter 2 - Regression and model validation
 
 *I have created an appropriate analysis dataset and excluded unwanted observations. Here we have analysis on the dataset and it's variables.*
 - Describe your work and results clearly. 
