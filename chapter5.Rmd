@@ -1,0 +1,146 @@
+---
+title: "Chapter 5 - Dimensionality Reduction techniques"
+output: html_document
+---
+```{r GlobalOptions}
+options(knitr.duplicate.label = 'allow')
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, knitr.duplicate.label = 'allow')
+options(knitr.duplicate.label = 'allow', debug = TRUE)
+```
+
+
+```{r cars}
+summary(cars)
+```
+
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+
+#"Chapter 5 - Dimensionality Reduction techniques"
+
+1.Here are some correlations between the variables:
+
+```{r}
+human <- read.table("http://s3.amazonaws.com/assets.datacamp.com/production/course_2218/datasets/human2.txt", sep= ",", header=TRUE, row.names = 1)
+library(GGally)
+library(corrplot)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+
+ggpairs(human)
+cor(human)
+dim(human)
+str(human)
+colnames(human)
+head(human)
+```
+
+The dataset created and used in this exercise is composed of eight variables and 155 observations. Out of the included variables, "GNI" and "Mat.Mor" are integer variables and the other variables are all numerical. In the following table, the information stored (by variables) is shown and elaborated
+
+Variable - Explanation
+
+Labo.FM - ratio of females and males in the labour force
+Edu.Exp - expected years of schooling
+Life.Exp - life expectancy at birth
+GNI - gross national income per capita
+Mat.Mor - maternal mortality ratio
+Ado.Birth - adolescent birth rate
+Parli.F - percentage of female representatives in parliament
+
+```{r}
+options(knitr.duplicate.label = 'allow', debug = TRUE)
+library(pander)
+pandoc.table(summary(human), caption = "Summary of Human data", split.table = 80)
+ggpairs(human, mapping = aes(alpha = 0.3), lower = list(combo = wrap("facethist")))
+```
+The summary shows interesting observations on the variables. The adoloscent birth rate (Ado.Birth) is positively correlated (0.759) with maternal mortality ratio but negatively correlated (-0.857) with life expectancy at birth (Life.Exp). Similarly, ratio of females and males with secondary education (Edu2.FM) and expected years of schooling (Edu.Exp) are both positively correlated with life expectancy at birth (Life.Exp). On the other hand, there is very little correlation between the ratio of females and males in labour force (Labo.FM) with "Edu.Exp" and "GNI". 
+
+2.
+3.
+
+PCA analysis and a biplot (in a couple different ways)
+
+biplot(pca_human, choices = 1:2, cex=c(0.8,1), col=c("grey40", "deeppink2"))
+
+In the following section, we will summarize the principal components and make a principal component analysis (PCA) plot. First, PCA is done on non-standardized data followed up by standardized data.
+```{r, fig.height=11, fig.width=11}
+pca_human<-prcomp(human)
+biplot(pca_human, choices = 1:2, cex=c(0.8,1), col=c("grey40", "deeppink2"))
+sum_pca_human<-summary(pca_human)
+sum_pca_human
+sum_pca_human_var<-sum_pca_human$sdev^2
+sum_pca_human_var
+pca_pr <- round(100*sum_pca_human$importance[2, ], digits = 1)
+pc_lab<-paste0(names(pca_pr), " (", pca_pr, "%)")
+biplot(pca_human, cex = c(0.8, 1), col = c("grey40", "deeppink2"), xlab = pc_lab[1], ylab = pc_lab[2], main = "PCA plot of non-scaled human data")
+#biplot(pca_human, choices = 1:2, cex = c(1, 1), col = c("grey40", "deeppink2"),sub = "PC1 & PC2 with non-standardised dataset")
+```
+The PCA biplot above does not provide a meaningful insight to the data as it shows that a single variable, "GNI" has a dominant impact and greater weight. Moreover, "GNI" has a larger variance compared to other variables.
+
+
+Next, we will scale the variables in the human data and compute principal components and plot the results.
+
+```{r}
+human_std <- scale(human)
+pca_human_std <- prcomp(human_std)
+biplot(pca_human, choices = 1:2, cex=c(0.8,1), col=c("grey40", "deeppink2"))
+```
+
+```{r, fig.height=10, fig.width=10}
+pca_human_s<-prcomp(human, scale. = TRUE)
+sum_pca_human_s<-summary(pca_human_s)
+pca_pr_s <- round(100*sum_pca_human_s$importance[2, ], digits = 1)
+pc_lab<-paste0(names(pca_pr_s), " (", pca_pr_s, "%)")
+sum_pca_human_var_s<-sum_pca_human_s$sdev^2
+sum_pca_human_var_s
+biplot(pca_human_s, cex = c(0.8, 1), col = c("grey40", "deeppink2"), xlab = pc_lab[1], ylab = pc_lab[2], main = "PCA plot of scaled human data")
+```
+Here, after standardization, we can see that the plots look different and thus the results are different. The results are different after scaling because PCA is more sensitive and informative when the original features are scaled. Also, PCA assumes that features with larger variances are more important that those with smaller variances. In the non-scaled pca plot, we observed that the variables with higher values have a bigger influence as is the case with the "GNI" variable. After scaling the data, the variance between the variables is more reasonable. The first principal component (PC1) explains 53% of the variation compared to the 100% from when the data was not scaled.
+
+
+4.
+
+Interpreting the two principal component dimensions:
+(1). Correlations between variables: The smaller angle between the arrows explains the greater correlation between the variables. With this assumption in mind, we can see that four of the variables, "Edu.Exp", "Life.Exp", "GNU" and "EDU.FM" are correlated. Out of those, "GNU" and "EDU2.FM" have the highest correlation as explained by the arrows and the angles formed by the arrows. In the same way, the variables "Parli.F" and "Labo.FM" are also correlated as are the variables "Mat.Mor" and "Ado.Birth". In addition, the plot shows that the variables "Life.Exp" and "Ado.Birth" are the least correlated as they are furthest in the plot (indicated by the large angle between these two variables).   
+
+(2). Correlation between variables and Principal components: It is assumed that the smaller the angle between the variables and principal components, the more positively correlated the variable is. In light of the assumption, the variables "Parli.F" and "Labo.FM" are positively correlated to PC1 (i.e they are contributing the direction of PC1) whereas other variables are positively correlated to PC2 and thus directing the arrows towards PC2. Also, for PC2, "Life.Exp", "Edu2.FM", "GNU" and "Ado.FM" have higher weights than other variables.
+
+
+5.
+
+We will use tea data from the FactoMineR package to practice multiple correspondence analysis (MCA). In this data, there are 300 observations and 36 variables.
+```{r}
+library(FactoMineR)
+data("tea")
+str(tea)
+dim(tea)
+summary(tea)
+```
+
+
+```{r, fig.width=10, fig.height=15}
+library(tidyr)
+library(dplyr)
+keep<- c("breakfast","tea.time","friends","frequency","Tea","sugar","sex","sophisticated")
+my_tea <- dplyr::select(tea, one_of(keep))
+gather(my_tea) %>% ggplot(aes(value)) + geom_bar() + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8)) + facet_wrap("key", scales = "free")
+
+mca_tea <- MCA(my_tea, graph=FALSE)
+summary(mca_tea, nbelements=Inf, nbind=5)
+```
+
+```{r, fig.width=10, fig.height=10}
+plot(mca_tea, invisible = c("ind"), habillage = "quali", sub = "MCA of tea dataset")
+
+```
+In general, the MCA plot grouped the categories that are in a way, equivalent to each other, at least to some extent. I suppose it would be better to refer to them as, "similar cathegories" (both ways, as in: both are individually similar to the other one, so they share similarity to each other). Categories such as "tea time" and "friends" are grouped together and in the same way, so are the categories such as "Not friends"" and "Not.tea time". In other words, friends tend to spend tea time together and those who do not have tea during other times (not tea times) are not close friends. The plot also indicates that females are more social than males because they have friends, and participate in tea time. It also indicates that females do not put sugar into tea, like males do.
+
+
