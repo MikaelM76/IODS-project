@@ -39,32 +39,32 @@ summary(rats)
 # 2. Turning cathegorical variables to factors
 bprs$treatment <- factor(bprs$treatment) 
 bprs$subject <- factor(bprs$subject)
-bprs$week0 <- factor(bprs$week0)
-bprs$week1 <- factor(bprs$week1)
-bprs$week2 <- factor(bprs$week2)
-bprs$week3 <- factor(bprs$week3)
-bprs$week4 <- factor(bprs$week4)
-bprs$week5 <- factor(bprs$week5)
-bprs$week6 <- factor(bprs$week6)
-bprs$week7 <- factor(bprs$week7)
-bprs$week8 <- factor(bprs$week8)
-#
-rats$ID <- factor(rats$ID)
-rats$Group <- factor(rats$Group)
-rats$WD1 <- factor(rats$WD1)
-rats$WD22 <- factor(rats$WD22)
-rats$WD8 <- factor(rats$WD8)
-rats$WD15 <- factor(rats$WD15)
-rats$WD29 <- factor(rats$WD29)
-rats$WD36 <- factor(rats$WD36)
-rats$WD43 <- factor(rats$WD43)
-rats$WD44 <- factor(rats$WD44)
-rats$WD50 <- factor(rats$WD50)
-rats$WD57 <- factor(rats$WD57)
-rats$WD64 <- factor(rats$WD64)
 
 rats$ID <- factor(rats$ID)
 rats$Group <- factor(rats$Group)
+
+#The desired results are the same with or without the nect factorisations. With the analysis, the factorisation of the following
+#variables isn't for the best however. This leads me to conclude they are not cathegorical.
+#bprs$week1 <- factor(bprs$week1)
+#bprs$week2 <- factor(bprs$week2)
+#bprs$week3 <- factor(bprs$week3)
+#bprs$week4 <- factor(bprs$week4)
+#bprs$week5 <- factor(bprs$week5)
+#bprs$week6 <- factor(bprs$week6)
+#bprs$week7 <- factor(bprs$week7)
+#bprs$week8 <- factor(bprs$week8)
+
+#rats$WD22 <- factor(rats$WD22)
+#rats$WD8 <- factor(rats$WD8)
+#rats$WD15 <- factor(rats$WD15)
+#rats$WD29 <- factor(rats$WD29)
+#rats$WD36 <- factor(rats$WD36)
+#rats$WD43 <- factor(rats$WD43)
+#rats$WD44 <- factor(rats$WD44)
+#rats$WD50 <- factor(rats$WD50)
+#rats$WD57 <- factor(rats$WD57)
+#rats$WD64 <- factor(rats$WD64)
+
 
 
 # 3. Wide to long
@@ -94,7 +94,6 @@ glimpse(ratsl)
 write.csv(bprsl, "bprsl.csv")
 write.csv(ratsl, "ratsl.csv")
 
-?fread
 
 # The difference between the wide and long forms is their different ways of listing observations
 # In the "long form", the variables are individually arranged to their own columns. This is also called
