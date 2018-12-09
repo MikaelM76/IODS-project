@@ -23,7 +23,7 @@ plot(pressure)
 ```
 
 
-#"Chapter 5 - Dimensionality Reduction techniques"
+#Chapter 5 - Dimensionality Reduction techniques
 
 1.Here are some correlations between the variables:
 

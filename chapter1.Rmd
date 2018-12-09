@@ -1,10 +1,11 @@
 
-# About the project
-This all seems so confusing at first
+# Chapter 1 - About the project:
+IODS is a great course where one can learn a lot of useful things. It seemed difficult at first glance, but
+after spending some time and doing some research, one can certainly learn a lot and for me, the course has in a way, molded my perspective on data science.
 
-*Write a short description about the course and add a link to your github repository here. This is an R markdown (.Rmd) file so you can use R markdown syntax. See the 'Useful links' page in the mooc area (chapter 1) for instructions.*
 
-The course is all about exploring the possibilities of ODS and getting familiar with, as well as having fun
+
+The course is all about exploring the possibilities of ODS and getting familiar with those, as well as having fun.
 
 [My_repository](https://github.com/MikaelM76/IODS-project)
 

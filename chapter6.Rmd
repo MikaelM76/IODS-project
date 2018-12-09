@@ -1,0 +1,212 @@
+---
+title: "Chapter 6 - Analysis of longitudinal data"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+
+# Chapter 6 - Analysis of longitudinal data
+
+The datasets RATS and BPRS are used for longitudinal data analysis here.
+
+
+Prior to this analysis part, the data was manipulated to long form. That is shown in the R-file "meet_and_repeat.R"
+
+
+
+
+
+1. "Analyses of Ch.8"
+
+
+
+
+```{r}
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(GGally)
+library(tidyr)
+library(lme4)
+library(data.table)
+ratsl <- fread("~/Documents/IODS-project/data/ratsl.csv", drop = 1)
+str(ratsl)
+# Needed corrections for variable classes
+ratsl$ID <- as.factor(ratsl$ID)
+ratsl$Group <- as.factor(ratsl$Group)
+ratsl$Time <- as.integer(substr(ratsl$Time, 3, 4))
+
+bprs <- read.table("https://raw.githubusercontent.com/KimmoVehkalahti/MABS/master/Examples/data/BPRS.txt", sep  =" ", header = T)
+rats <- read.table("https://raw.githubusercontent.com/KimmoVehkalahti/MABS/master/Examples/data/rats.txt", stringsAsFactors = F, na.strings = "..")
+
+head(ratsl)
+str(ratsl)
+summary(ratsl)
+glimpse(ratsl)
+```
+
+Graphics:
+```{r, warning = F, message = F}
+ggplot(ratsl, aes(x = Time, y = Weight, linetype = ID)) +
+  geom_line() +
+  scale_linetype_manual(values = rep(1:10, times = 4)) +
+  facet_grid(. ~ Group, labeller = label_both) +
+  theme(legend.position = "none") +
+  scale_y_continuous(limits = c(min(ratsl$Weight), max(ratsl$Weight)),
+                     name = "weight") +
+  scale_x_continuous(name = "Time (days)")
+# Standardized variable weight
+ratsl <- ratsl %>%
+  group_by(Time) %>%
+  mutate(stdweight = scale(Weight)) %>%
+  ungroup()
+# New plot
+ggplot(ratsl, aes(x = Time, y = stdweight, linetype = ID)) +
+  geom_line() +
+  scale_linetype_manual(values = rep(1:10, times = 4)) +
+  facet_grid(. ~ Group, labeller = label_both) +
+  theme(legend.position = "none") +
+  scale_y_continuous(name = "standardized weight") +
+  scale_x_continuous(name = "Time (days)")
+# Mean response plot
+n <- ratsl$Time %>%
+  unique() %>%
+  length()
+ratsls <- ratsl %>%
+  group_by(Group, Time) %>%
+  summarise(mean = mean(Weight), se = sd(Weight)/sqrt(n)) %>%
+  ungroup()
+ggplot(ratsls, aes(x = Time, y = mean, linetype = Group, shape = Group)) +
+  geom_line() +
+  scale_linetype_manual(values = c(1,2,3)) +
+  geom_point(size=3) +
+  scale_shape_manual(values = c(1,2,3)) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se, linetype="1"), width=0.3) +
+  theme(legend.position = c(0.8,0.4)) +
+  scale_y_continuous(name = "mean(weight) +/- se(weight)") +
+  scale_x_continuous(name = "Time (days)")
+``` 
+
+Here the weight of the individual rats is plotted with time, in their respective diet groups. There doesn't seem to be any significant differences in weight development possibilised by a diet group. Visually, it is very difficult to notice any differences of the response variable in the different groups.
+
+
+```{r, warning = F, message = F}
+# Boxplot
+ratsl64 <- ratsl %>%
+  filter(Time > 1) %>%
+  group_by(Group, ID) %>%
+  summarise(mean = mean(Weight)) %>%
+  ungroup()
+ggplot(ratsl64, aes(x = Group, y = mean)) +
+  geom_boxplot() +
+  stat_summary(fun.y = "mean", geom = "point", shape=23, size=4, fill = "white") +
+  scale_y_continuous(name = "mean(weight), days 1-64")
+# Boxplot without the outlier
+ratsl641 <- ratsl %>%
+  filter(Time > 1, Weight < 580) %>%
+  group_by(Group, ID) %>%
+  summarise(mean = mean(Weight)) %>%
+  ungroup()
+ggplot(ratsl641, aes(x = Group, y = mean)) +
+  geom_boxplot() +
+  stat_summary(fun.y = "mean", geom = "point", shape=23, size=4, fill = "white") +
+  scale_y_continuous(name = "mean(weight), days 1-64")
+rats <- fread("https://raw.githubusercontent.com/KimmoVehkalahti/MABS/master/Examples/data/rats.txt", drop = 1)
+str(rats)
+ratsl642 <- ratsl64 %>%
+  mutate(baseline = rats$WD1)
+fit <- lm(mean ~ baseline + Group, data = ratsl642)
+anova(fit)
+```
+Here I'm using the "Summary measure approach". Differences in the means of the response variable are the result intended.. The averages are composed of data from the period after treatment. "ANOVA" attemps to predict group mean weights (using simple regression) by the treatment and/or the baseline weight. It can be seen that the difference between the different diets is statistically significant at the 10% level. The result is somewhat contradictory to the purely visual approach, showinf that the visual analysis is in this case, insufficient and slightly misleading.
+
+
+2 -Analyses from ch.9
+
+BPRSL data
+```{r, warning = F, message = F}
+bprsl <- fread("~/Documents/IODS-project/data/bprsl.csv", drop = 1)
+bprsl$week <- as.integer(substr(bprsl$week, 5, 5))
+bprsl$treatment <- as.factor(bprsl$treatment)
+bprsl$subject <- as.factor(bprsl$subject)
+str(bprsl)
+head(bprsl)
+summary(bprsl)
+glimpse(bprsl)
+```
+Now let's move to the BPRSL data. Our dataset includes four variables: the id-variable "subject", the time variable "week", the variable for the treatment status "treatment" and the response variable "bprs".
+
+Graphical display of the data
+```{r, warning = F, message = F}
+ggplot(bprsl, aes(x = week, y = bprs, col = subject)) +
+  geom_line(aes(linetype = treatment)) +
+  scale_x_continuous(name = "Time (weeks)") +
+  scale_y_continuous(name = "BPRS") +
+  theme(legend.position = "top") 
+```
+
+First let us experiment with some plots. At this point the BPRS-measure appears to have gradually decreased in the 8 week prediod of the data sample, undependant of the treatment status. Before further analysis, I doubt we can come into any significant conclusions.
+
+
+```{r, warning = F, message = F}
+m <- lm(bprs ~ week + treatment, data = bprsl)
+summary(m)
+```
+Now I'm attempting analysis with "linear mixed models". These include "the random intercept model", "the random intercept and slope model" and "the interaction model", All of the models are similar, the 2nd and 3rd ones are simply expanded versions of "the random intercept model". First I will use the naive linear model. This does not include the repeated measures structure of the data. The model indicates that the BPRS-measure decreases over time, and that this change is statistically significant. The average for the baseline BPRS-value of the subjects of treatment group two is slightly higher (Not significantly). 
+
+ Random intercept model
+```{r, warning = F, message = F}
+bprsl_m1 <- lmer(bprs ~ week + treatment + (1 | subject), data = bprsl, REML = FALSE)
+summary(bprsl_m1)
+```
+This model allows different intercept terms for individual observations. This changes the standard error as well as the coefficient. The coefficients of "week" and "treatment" are the same as they were in the naive linear model, but the standard errors aren't. Instead, the errors are smaller in this case.
+
+Random intercept and slope model
+```{r, warning = F, message = F}
+bprsl_m2 <- lmer(bprs ~ week + treatment + (week | subject), data = bprsl, REML = FALSE)
+summary(bprsl_m2)
+```
+Now we are enabling a different slopes for observations, changing the standard errors. The standard error on "treatment" becomes smaller, while the errors for the intercept and for "week" grow. 
+
+
+Next we modify the model to allow our variables to interact:
+```{r, warning = F, message = F}
+bprsl_m3 <- lmer(bprs ~ week + treatment + (week | subject) + week*treatment, data = bprsl, REML = FALSE)
+summary(bprsl_m3)
+```
+ For "week", the BPRS value decreased within the 8 week period in the treatment group one by approximately -2.6 points in a week (on average). That is statistically significant (t-value: >7). The coefficient on treatment variable indicates that the subjects in treatment group two had a slightly lower average baseline BPRS value. The interaction term shows that the decrease of the BPRS value was slower in treatment group two. These additional estimates are unfortunately not statistically significant. Now I can conclude that treatment in group one seems more efficient, even if this difference isn't significant statistically.
+
+Likelihood ratio test
+```{r, warning = F, message = F}
+anova(bprsl_m2, bprsl_m1)
+anova(bprsl_m3, bprsl_m2)
+```
+Now I'm attemting to check the usability of the previous models by using the chi-squared statistic. According to the 1st experiment, the random intercept model can be excluded from my test. The chi-squared statistic is small, as well as the p-value. Further investigating, we should probably pick the 3rs model. The reasoning for this comes from the larger p-value, even if the difference in the results of the remaining models was much smaller than before. 
+
+
+OBS VS. Fitted values
+```{r, warning = F, message = F}
+ggplot(bprsl, aes(x = week, y = bprs, col = subject)) +
+  geom_line(aes(linetype = treatment)) +
+  scale_x_continuous(name = "Time (weeks)") +
+  scale_y_continuous(name = "BPRSL") +
+  theme(legend.position = "top")
+fitted <- fitted(bprsl_m3)
+bprsl$fitted <- fitted
+ggplot(bprsl, aes(x = week, y = fitted, col = subject)) +
+  geom_line(aes(linetype = treatment)) +
+  scale_x_continuous(name = "Time (weeks)") +
+  scale_y_continuous(name = "BPRS") +
+  theme(legend.position = "top")
+```
+There are mainly two clear observations that I'm able to make regarding this model.
+1. The average intercept in treatment group two appears to be smaller than in treatment group one.
+2. Slopes for the data of the 1st treatment group seem a bit steeper than those of the 2nd group.
